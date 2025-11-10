@@ -1,13 +1,14 @@
 import { Event } from "@/types/inventory";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, User } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface EventCardProps {
   event: Event;
   onClick?: () => void;
+  creatorName?: string;
 }
 
 const statusConfig = {
@@ -17,7 +18,7 @@ const statusConfig = {
   cancelled: { label: "Cancelado", variant: "destructive" as const },
 };
 
-export function EventCard({ event, onClick }: EventCardProps) {
+export function EventCard({ event, onClick, creatorName }: EventCardProps) {
   const status = statusConfig[event.status];
   
   return (
@@ -35,11 +36,20 @@ export function EventCard({ event, onClick }: EventCardProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Clock className="h-4 w-4" />
-          <span className="text-sm">
-            {format(new Date(event.date), "d 'de' MMMM yyyy", { locale: ptBR })}
-          </span>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Clock className="h-4 w-4" />
+            <span className="text-sm">
+              {format(new Date(event.date), "d 'de' MMMM yyyy", { locale: ptBR })}
+              {event.time && ` às ${event.time}`}
+            </span>
+          </div>
+          {creatorName && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <User className="h-4 w-4" />
+              <span className="text-sm">Criado por {creatorName}</span>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

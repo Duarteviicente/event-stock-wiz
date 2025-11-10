@@ -11,6 +11,7 @@ interface AddEventDialogProps {
   onAdd: (event: {
     name: string;
     date: string;
+    time?: string;
     status: 'planned' | 'in-progress' | 'completed' | 'cancelled';
   }) => void;
 }
@@ -19,6 +20,7 @@ export function AddEventDialog({ onAdd }: AddEventDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
   const [status, setStatus] = useState<'planned' | 'in-progress' | 'completed' | 'cancelled'>('planned');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -29,9 +31,10 @@ export function AddEventDialog({ onAdd }: AddEventDialogProps) {
       return;
     }
 
-    onAdd({ name, date, status });
+    onAdd({ name, date, time: time || undefined, status });
     setName("");
     setDate("");
+    setTime("");
     setStatus('planned');
     setOpen(false);
     toast.success("Evento criado com sucesso!");
@@ -70,6 +73,15 @@ export function AddEventDialog({ onAdd }: AddEventDialogProps) {
               />
               <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="event-time">Hora do Evento (opcional)</Label>
+            <Input
+              id="event-time"
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="status">Estado</Label>

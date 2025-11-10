@@ -1,3 +1,12 @@
+export interface User {
+  id: string;
+  email: string;
+  password: string;
+  role: 'admin' | 'user';
+  name: string;
+  createdAt: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -11,8 +20,10 @@ export interface Event {
   id: string;
   name: string;
   date: string;
+  time?: string;
   status: 'planned' | 'in-progress' | 'completed' | 'cancelled';
   createdAt: string;
+  createdBy: string; // user id
 }
 
 export interface EventAllocation {
@@ -33,4 +44,5 @@ export interface MovementHistory {
   quantity: number;
   date: string;
   notes?: string;
+  userId: string; // user who made the movement
 }

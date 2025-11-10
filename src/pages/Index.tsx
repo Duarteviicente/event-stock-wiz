@@ -1,17 +1,22 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Package, Calendar, ArrowLeftRight, LayoutDashboard } from "lucide-react";
+import { Package, Calendar, ArrowLeftRight, LayoutDashboard, Users, LogOut } from "lucide-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { Product, Event, EventAllocation, MovementHistory } from "@/types/inventory";
+import { Product, Event, EventAllocation, MovementHistory, User } from "@/types/inventory";
 import { ProductCard } from "@/components/ProductCard";
 import { EventCard } from "@/components/EventCard";
 import { AddProductDialog } from "@/components/AddProductDialog";
 import { AddEventDialog } from "@/components/AddEventDialog";
 import { AllocateProductDialog } from "@/components/AllocateProductDialog";
+import { StatisticsCard } from "@/components/StatisticsCard";
+import { UserManagement } from "@/components/UserManagement";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 const Index = () => {
+  const { currentUser, logout, isAdmin } = useAuth();
+  const [users] = useLocalStorage<User[]>("users", []);
   const [products, setProducts] = useLocalStorage<Product[]>("products", []);
   const [events, setEvents] = useLocalStorage<Event[]>("events", []);
   const [allocations, setAllocations] = useLocalStorage<EventAllocation[]>("allocations", []);
@@ -27,11 +32,12 @@ const Index = () => {
     setProducts([...products, newProduct]);
   };
 
-  const addEvent = (eventData: Omit<Event, "id" | "createdAt">) => {
+  const addEvent = (eventData: Omit<Event, "id" | "createdAt" | "createdBy">) => {
     const newEvent: Event = {
       ...eventData,
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
+      createdBy: currentUser?.id || '',
     };
     setEvents([...events, newEvent]);
   };
@@ -60,6 +66,7 @@ const Index = () => {
       type: "allocation",
       quantity: -allocationData.allocatedQuantity,
       date: new Date().toISOString(),
+      userId: currentUser?.id || '',
     };
 
     setProducts(
@@ -84,6 +91,7 @@ const Index = () => {
       type: "return",
       quantity: returnQuantity,
       date: new Date().toISOString(),
+      userId: currentUser?.id || '',
     };
 
     setProducts(
@@ -117,14 +125,27 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-foreground">Gestão de Stocks</h1>
-          <p className="text-muted-foreground mt-1">Sistema de inventário para eventos</p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Gestão de Stocks</h1>
+              <p className="text-muted-foreground mt-1">Sistema de inventário para eventos</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-sm font-medium">{currentUser?.name}</p>
+                <p className="text-xs text-muted-foreground">{currentUser?.email}</p>
+              </div>
+              <Button variant="outline" size="icon" onClick={logout}>
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'} max-w-3xl`}>
             <TabsTrigger value="dashboard" className="gap-2">
               <LayoutDashboard className="h-4 w-4" />
               Dashboard
@@ -141,9 +162,22 @@ const Index = () => {
               <ArrowLeftRight className="h-4 w-4" />
               Alocações
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="users" className="gap-2">
+                <Users className="h-4 w-4" />
+                Utilizadores
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
+            <StatisticsCard 
+              products={products}
+              events={events}
+              allocations={allocations}
+              movements={movements}
+            />
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-card p-6 rounded-lg border border-border">
                 <div className="flex items-center justify-between">
@@ -236,9 +270,12 @@ const Index = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {events.map(event => (
-                  <EventCard key={event.id} event={event} />
-                ))}
+                {events.map(event => {
+                  const creator = users.find(u => u.id === event.createdBy);
+                  return (
+                    <EventCard key={event.id} event={event} creatorName={creator?.name} />
+                  );
+                })}
               </div>
             )}
           </TabsContent>
@@ -269,11 +306,14 @@ const Index = () => {
                   return (
                     <div key={allocation.id} className="bg-card p-4 rounded-lg border border-border">
                       <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold text-foreground">{event?.name}</h3>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {product?.name}: {allocation.allocatedQuantity} {product?.unit} alocados
-                          </p>
+                         <div>
+                           <h3 className="font-semibold text-foreground">{event?.name}</h3>
+                           <p className="text-sm text-muted-foreground mt-1">
+                             {product?.name}: {allocation.allocatedQuantity} {product?.unit} alocados
+                           </p>
+                           <p className="text-xs text-muted-foreground">
+                             por {users.find(u => u.id === movements.find(m => m.eventId === event?.id && m.productId === product?.id && m.type === 'allocation')?.userId)?.name || 'Desconhecido'}
+                           </p>
                           {allocation.returnedQuantity && (
                             <p className="text-sm text-accent mt-1">
                               ✓ {allocation.returnedQuantity} {product?.unit} devolvidos
@@ -309,6 +349,12 @@ const Index = () => {
               </div>
             )}
           </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="users" className="space-y-4">
+              <UserManagement />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
 
